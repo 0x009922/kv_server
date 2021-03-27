@@ -4,13 +4,29 @@ defmodule KvServer.Application do
   @moduledoc false
 
   use Application
+  require Logger
 
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: KvServer.Worker.start_link(arg)
-      # {KvServer.Worker, arg}
+      {
+        Plug.Cowboy,
+        scheme: :http,
+        plug: KvServer.Endpoint,
+        port: 3000,
+        dispatch: [
+          {:_,
+           [
+             {"/ws", KvServer.SocketHandler, []},
+             {:_, Plug.Adapters.Cowboy.Handler, {KvServer.Endpoint, []}}
+           ]}
+        ]
+      },
+      {KvServer.Storage, [name: KvServer.Storage]},
+      {KvServer.Registry, [name: KvServer.Registry]}
     ]
+
+    Logger.info("Starting application...")
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
